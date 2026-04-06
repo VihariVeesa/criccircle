@@ -1,32 +1,31 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Request, Depends
+from fastapi.responses import RedirectResponse
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from app.database import engine, Base, SessionLocal
-
-from fastapi import Request
-from app.auth.google import oauth
 from starlette.middleware.sessions import SessionMiddleware
 
-# Import models (VERY IMPORTANT for table creation)
-from app.models import user, session, participant
+from app.database import SessionLocal, engine
 from app.models.user import User
 from app.models.session import Session as SessionModel
 from app.models.participant import Participant
+from app.auth.google import oauth
 
-# Import schemas
-from app.schemas.user import UserCreate
-from app.schemas.session import SessionCreate
-from app.schemas.participant import JoinSession
-
-# Create app FIRST
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="supersecretkey")
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# ✅ Session Middleware
+app.add_middleware(SessionMiddleware, secret_key="super-secret-key")
 
+# ✅ CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3001"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-# Dependency to get DB session
+# ✅ DB Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -35,116 +34,133 @@ def get_db():
         db.close()
 
 
-# ------------------ BASIC ROUTES ------------------
+# =========================
+# 🔐 GOOGLE LOGIN
+# =========================
 
-@app.get("/")
-def home():
-    return {"message": "CricCircle Backend Running 🚀"}
+@app.get("/login/google")
+async def login_google(request: Request):
+    redirect_uri = "http://localhost:8000/auth/callback"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+@app.get("/auth/callback")
+async def auth_callback(request: Request, db: Session = Depends(get_db)):
+    try:
+        token = await oauth.google.authorize_access_token(request)
+        user_info = token.get("userinfo")
+
+        if not user_info:
+            return {"error": "User info not received"}
+
+        email = user_info.get("email")
+        name = user_info.get("name")
+
+        # ✅ Save session
+        request.session["user"] = {
+            "email": email,
+            "name": name
+        }
+
+        # ✅ Save to DB if new
+        existing_user = db.query(User).filter(User.email == email).first()
+
+        if not existing_user:
+            new_user = User(name=name, email=email, role="analyst")
+            db.add(new_user)
+            db.commit()
+
+        return RedirectResponse(url="http://localhost:3001/dashboard")
+
+    except Exception as e:
+        print("🔥 ERROR in /auth/callback:", str(e))
+        return {"error": str(e)}
 
 
-@app.get("/health")
-def health_check():
-    return {"status": "OK"}
+# =========================
+# 👤 CURRENT USER
+# =========================
 
+@app.get("/me")
+async def get_current_user(request: Request, db: Session = Depends(get_db)):
+    user = request.session.get("user")
 
-# ------------------ USER APIs ------------------
+    if not user:
+        return {"error": "Not logged in"}
 
-@app.post("/users")
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    new_user = User(
-        name=user.name,
-        email=user.email,
-        role=user.role
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+    db_user = db.query(User).filter(User.email == user["email"]).first()
 
+    return {
+        "id": db_user.id,
+        "email": db_user.email,
+        "name": db_user.name
+    }
 
-@app.get("/users")
-def get_users(db: Session = Depends(get_db)):
-    users = db.query(User).all()
-    return users
-
-
-# ------------------ SESSION APIs ------------------
-
-@app.post("/sessions")
-def create_session(session: SessionCreate, db: Session = Depends(get_db)):
-    new_session = SessionModel(
-        topic=session.topic,
-        host_name=session.host_name,
-        scheduled_time=session.scheduled_time,
-        max_participants=session.max_participants
-    )
-    db.add(new_session)
-    db.commit()
-    db.refresh(new_session)
-    return new_session
-
+# =========================
+# 📺 SESSIONS
+# =========================
 
 @app.get("/sessions")
 def get_sessions(db: Session = Depends(get_db)):
     sessions = db.query(SessionModel).all()
-    return sessions
 
+    result = []
+    for s in sessions:
+        count = db.query(Participant).filter(
+            Participant.session_id == s.id
+        ).count()
 
-# ------------------ JOIN SESSION ------------------
+        result.append({
+            "id": s.id,
+            "topic": s.topic,
+            "host_name": s.host_name,
+            "max_participants": s.max_participants,
+            "slots_left": s.max_participants - count,
+            "scheduled_time": s.scheduled_time
+        })
+
+    return result
+
+# =========================
+# 🙋 JOIN SESSION
+# =========================
 
 @app.post("/join")
-def join_session(data: JoinSession, db: Session = Depends(get_db)):
-    
-    # Check duplicate join
-    existing = db.query(Participant).filter(
-        Participant.user_id == data.user_id,
-        Participant.session_id == data.session_id
-    ).first()
+def join_session(data: dict, db: Session = Depends(get_db)):
+    user_id = data["user_id"]
+    session_id = data["session_id"]
 
-    if existing:
-        return {"message": "User already joined this session"}
-
-    # Get session details
-    session = db.query(SessionModel).filter(
-        SessionModel.id == data.session_id
-    ).first()
-
-    if not session:
-        return {"message": "Session not found"}
-
-    # Count participants
+    # Check limit
     count = db.query(Participant).filter(
-        Participant.session_id == data.session_id
+        Participant.session_id == session_id
     ).count()
+
+    session = db.query(SessionModel).filter(
+        SessionModel.id == session_id
+    ).first()
 
     if count >= session.max_participants:
         return {"message": "Session is full"}
 
+    # Prevent duplicate
+    existing = db.query(Participant).filter(
+        Participant.user_id == user_id,
+        Participant.session_id == session_id
+    ).first()
+
+    if existing:
+        return {"message": "Already joined"}
+
     participant = Participant(
-        user_id=data.user_id,
-        session_id=data.session_id
+        user_id=user_id,
+        session_id=session_id
     )
 
     db.add(participant)
     db.commit()
-    db.refresh(participant)
 
-    return participant
+    return {"message": "Joined successfully"}
 
-@app.get("/login/google")
-async def login_google(request: Request):
-    redirect_uri = "http://127.0.0.1:8000/auth/callback"
-    return await oauth.google.authorize_redirect(request, redirect_uri)
-
-
-@app.get("/auth/callback")
-async def auth_callback(request: Request):
-    token = await oauth.google.authorize_access_token(request)
-    
-    user_info = token.get("userinfo")
-    
-    return {
-        "message": "Login successful",
-        "user": user_info
-    }
-
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return {"message": "Logged out"}
