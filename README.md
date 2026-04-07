@@ -98,7 +98,7 @@ DATABASE_URL=postgresql://postgres:postgres@db:5432/criccircle
 
 ## Step 1: Clone Repository
 
-git clone https://github.com/YOUR_USERNAME/criccircle.git
+git clone https://github.com/VihariVeesa/criccircle.git
 cd criccircle
 
 ---
