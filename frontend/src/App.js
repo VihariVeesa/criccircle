@@ -29,7 +29,7 @@ function App() {
             <button
               className="primary-btn"
               onClick={() => {
-                window.location.href = "http://127.0.0.1:8000/login/google";
+                window.location.href = "http://localhost:8000/login/google";
               }}
             >
               Get Started
