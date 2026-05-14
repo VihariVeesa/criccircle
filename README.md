@@ -1,255 +1,109 @@
-# 🏏 CricCircle
+# CricCircle
 
-CricCircle is a professional cricket discussion platform where users can join moderated sessions, share insights, and engage in structured conversations.
+CricCircle is a professional cricket discussion platform where moderators and
+analysts can host structured, time-bound sessions, build reputation through
+ratings, and keep discussions professional.
 
-The goal is to create a **LinkedIn-style environment for cricket analysts**, ensuring discussions are meaningful, respectful, and structured.
+## MVP Scope
 
----
+- Google sign-in
+- Role-based onboarding for `moderator` and `analyst`
+- Session lobby with scheduled, live, and completed rooms
+- Moderator-led room creation and participant management
+- Join and leave flow with participant limits
+- Post-session ratings
 
-# 🚀 Tech Stack
+## Tech Stack
 
-## Backend
+- Frontend: React
+- Backend: FastAPI
+- Database: PostgreSQL
+- Infra: Docker Compose and Nginx
 
-* FastAPI (Python)
-* PostgreSQL
-* SQLAlchemy
-* Google OAuth (Authentication)
+## Environment Variables
 
-## Frontend
+Create `backend/.env` and add:
 
-* React.js
-* Axios
-
-## DevOps / Infrastructure
-
-* Docker
-* Docker Compose
-* Nginx
-
----
-
-# 📦 Features (MVP)
-
-* Google Login Authentication
-* Session Creation & Listing
-* Join Session with slot limits
-* Participant Tracking
-* Time-based session handling
-* Professional discussion environment
-
----
-
-# 🧱 Architecture
-
-Frontend (React) → Nginx → Backend (FastAPI) → PostgreSQL
-
----
-
-# ⚙️ Prerequisites
-
-Make sure the following are installed:
-
-* Docker Desktop
-* Git
-* (Optional) Node.js (only if running frontend separately)
-
----
-
-# 📁 Project Structure
-
-criccircle/
-│
-├── backend/
-│   ├── app/
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env
-│
-├── frontend/
-│   ├── src/
-│   ├── package.json
-│   └── Dockerfile
-│
-├── nginx/
-│   ├── nginx.conf
-│   └── Dockerfile
-│
-├── docker-compose.yml
-└── README.md
-
----
-
-# 🔐 Environment Variables
-
-Create a file:
-
-backend/.env
-
-Add the following:
-
+```env
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 SECRET_KEY=supersecretkey
 DATABASE_URL=postgresql://postgres:postgres@db:5432/criccircle
+BACKEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:3000
+```
 
----
+## Access Modes
 
-# 🐳 How to Run the Project
+### Option A: Docker + Nginx
 
-## Step 1: Clone Repository
+Use this when you want the full stack behind one main URL.
 
-git clone https://github.com/YOUR_USERNAME/criccircle.git
-cd criccircle
+Update `backend/.env`:
 
----
+```env
+BACKEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost
+```
 
-## Step 2: Start the Application
+Run:
 
+```bash
 docker-compose up --build
+```
 
----
+Open:
 
-## ✅ That’s it. The platform will start automatically.
+- App: [http://localhost](http://localhost)
+- API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
----
+### Option B: Local frontend + local backend
 
-# 🌐 Access the Application
+Use this when you want React and FastAPI running separately.
 
-Frontend: http://localhost
-Backend API: http://localhost:8000
-Swagger Docs: http://localhost:8000/docs
+Update `backend/.env`:
 
----
+```env
+BACKEND_URL=http://localhost:8000
+FRONTEND_URL=http://localhost:3000
+```
 
-# 🔑 Google Login Setup
+Run the backend and frontend separately, then open:
 
-1. Go to Google Cloud Console
-2. Create OAuth Client ID
-3. Choose: Web Application
+- App: [http://localhost:3000](http://localhost:3000)
+- API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
 
-Add this Authorized Redirect URI:
+## Google Login Setup
 
-http://localhost:8000/auth/callback
+In Google Cloud Console, add these authorized redirect URIs:
 
-4. Copy Client ID & Secret into `.env`
+- `http://localhost:8000/auth/callback`
 
----
+Use this same callback for both the Docker + Nginx setup and the local split setup.
 
-# 🧪 How to Use
+## Project Structure
 
-1. Open: http://localhost
-2. Click **Login with Google**
-3. After login, dashboard will load
-4. View available sessions
-5. Join sessions (limited slots)
-6. Participate in discussions
+```text
+criccircle/
+|-- backend/
+|-- frontend/
+|-- nginx/
+|-- docker-compose.yml
+`-- README.md
+```
 
----
+## Current Product Flow
 
-# 📊 Core Functionalities
+1. Sign in with Google
+2. Choose a role: moderator or analyst
+3. Accept professional conduct rules
+4. Enter the lobby
+5. Moderators create rooms
+6. Analysts join rooms
+7. Rate participants after the session ends
 
-## Session System
+## Notes
 
-* Each session has a fixed participant limit
-* Prevents overcrowding
-* Ensures structured discussions
-
-## Authentication
-
-* Google OAuth ensures real users
-* Session-based login handling
-
-## Professional Environment
-
-* Designed for meaningful cricket analysis
-* Avoids spam and unstructured chats
-
----
-
-# 🔁 Stop / Restart Application
-
-Stop:
-docker-compose down
-
-Restart:
-docker-compose up
-
----
-
-# 🧹 Clean Reset (if something breaks)
-
-docker-compose down -v
-docker system prune -a -f
-docker-compose up --build
-
----
-
-# ⚠️ Common Issues & Fixes
-
-## Port already in use
-
-Change ports in docker-compose.yml
-
----
-
-## Google Login not working
-
-* Verify redirect URI
-* Check Client ID & Secret
-
----
-
-## Backend not starting
-
-Check logs:
-docker-compose logs backend
-
----
-
-## Database issues
-
-Ensure DATABASE_URL uses:
-db (NOT localhost)
-
----
-
-# 🚀 Future Enhancements
-
-* Live video discussions (WebRTC)
-* Session recording & playback
-* AI moderation for toxicity
-* Leaderboard for analysts
-* Monetization (subscriptions)
-
----
-
-# 👨‍💻 Author
-
-Sunny Vihari Veesa
-Senior Program Manager | DevOps | Product Builder
-
----
-
-# 💡 Vision
-
-CricCircle aims to become a platform where:
-
-* Cricket discussions are professional
-* Analysts build credibility
-* Conversations create real value
-
-A structured alternative to noisy social media.
-
----
-
-# ⭐ Final Note
-
-This project is fully dockerized.
-
-Anyone can run it using:
-
-docker-compose up --build
-
-No manual setup required.
-
----
+- Meeting links are hidden until a user joins the room.
+- Ratings unlock only after a session is completed.
+- Aadhaar authentication is not part of the current MVP implementation.

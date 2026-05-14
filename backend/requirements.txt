@@ -3,6 +3,8 @@ uvicorn[standard]
 python-dotenv
 authlib
 httpx
-requests
 itsdangerous
 starlette
+sqlalchemy
+psycopg2-binary
+email-validator

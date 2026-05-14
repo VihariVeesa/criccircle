@@ -1,8 +1,20 @@
-import { render, screen } from '@testing-library/react';
-import App from './App';
+import { render, screen } from "@testing-library/react";
+import App from "./App";
 
-test('renders learn react link', () => {
+beforeEach(() => {
+  global.fetch = jest.fn().mockResolvedValue({
+    ok: false,
+    status: 401,
+  });
+});
+
+afterEach(() => {
+  jest.resetAllMocks();
+});
+
+test("renders CricCircle landing page", async () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(
+    await screen.findByText(/Where cricket analysts earn trust, not just attention/i)
+  ).toBeInTheDocument();
 });

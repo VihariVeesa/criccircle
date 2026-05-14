@@ -1,8 +1,11 @@
 from pydantic import BaseModel
 from datetime import datetime
 
+
 class SessionCreate(BaseModel):
     topic: str
-    host_name: str
+    description: str | None = None
     scheduled_time: datetime
-    max_participants: int
+    duration_minutes: int = 60
+    max_participants: int = 5
+    meeting_link: str | None = None

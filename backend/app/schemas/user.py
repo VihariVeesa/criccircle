@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, Field
 
-class UserCreate(BaseModel):
-    name: str
-    email: EmailStr
+
+class OnboardingUpdate(BaseModel):
     role: str
+    bio: str | None = Field(default=None, max_length=300)
+    rules_accepted: bool = False
