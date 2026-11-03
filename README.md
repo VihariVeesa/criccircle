@@ -20,6 +20,13 @@ ratings, and keep discussions professional.
 - Database: PostgreSQL
 - Infra: Docker Compose and Nginx
 
+## Clone the Repository
+
+```bash
+git clone https://github.com/VihariVeesa/criccircle.git
+cd criccircle
+```
+
 ## Environment Variables
 
 Create `backend/.env` and add:
